@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kedai Dapur Saya - Pro Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .active-tab { color: #7c3aed !important; border-top: 2px solid #7c3aed; }
+        .active-tab-admin { color: #f8fafc !important; background-color: #7c3aed; }
+        .modal-animate { animation: slideIn 0.2s ease-out; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="text-slate-900">
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl flex flex-col relative overflow-hidden">
+        
+        <!-- Header -->
+        <header class="p-4 bg-white border-b flex justify-between items-center sticky top-0 z-50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white">
+                    <i data-lucide="utensils"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold tracking-tight">KEDAI DAPUR SAYA</h1>
+                    <p id="mode-text" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Mode Pelanggan</p>
+                </div>
+            </div>
+            <button onclick="toggleView()" class="p-2 bg-slate-100 rounded-xl text-slate-600">
+                <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="content" class="flex-1 overflow-y-auto p-4 pb-24 hide-scrollbar">
+            <!-- Dynamic Content -->
+        </main>
+
+        <!-- Bottom Nav Customer -->
+        <nav id="nav-customer" class="fixed bottom-0 max-w-md w-full bg-white border-t flex justify-around items-center h-16 z-50">
+            <button onclick="setTab('menu')" id="btn-menu" class="flex flex-col items-center flex-1 py-2 text-slate-400">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Menu</span>
+            </button>
+            <button onclick="setTab('cart')" id="btn-cart" class="flex flex-col items-center flex-1 py-2 text-slate-400 relative">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Keranjang</span>
+                <div id="cart-badge" class="absolute top-1 right-5 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full hidden items-center justify-center border-2 border-white font-black">0</div>
+            </button>
+            <button onclick="setTab('status')" id="btn-status" class="flex flex-col items-center flex-1 py-2 text-slate-400">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Status</span>
+            </button>
+        </nav>
+
+        <!-- Bottom Nav Admin -->
+        <nav id="nav-admin" class="fixed bottom-0 max-w-md w-full bg-slate-900 border-t border-slate-800 hidden justify-around items-center h-16 z-50">
+            <button onclick="setAdminTab('report')" id="admin-report" class="flex flex-col items-center flex-1 py-2 text-slate-500">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Laporan</span>
+            </button>
+            <button onclick="setAdminTab('orders')" id="admin-orders" class="flex flex-col items-center flex-1 py-2 text-slate-500">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Pesanan</span>
+            </button>
+            <button onclick="setAdminTab('settings')" id="admin-settings" class="flex flex-col items-center flex-1 py-2 text-slate-500">
+                <i data-lucide="database" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold mt-1">Kelola</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Modal Layout -->
+    <div id="modal" class="fixed inset-0 bg-black/50 z-[100] hidden items-end justify-center">
+        <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 modal-animate max-h-[85vh] overflow-y-auto hide-scrollbar">
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        let menuData = [
+            // SOP
+            { id: 1, name: "Sop Kaki Sapi", price: 20000, cat: "Sop" },
+            { id: 2, name: "Sop Daging", price: 20000, cat: "Sop" },
+            // MIE KOCOK
+            { id: 3, name: "Mie Kocok Kaki Sapi", price: 16000, cat: "Mie" },
+            { id: 4, name: "Mie Kocok Daging Sapi", price: 16000, cat: "Mie" },
+            { id: 5, name: "Mie Kocok Baso Sapi", price: 20000, cat: "Mie" },
+            { id: 6, name: "Mie Kocok Campur", price: 16000, cat: "Mie" },
+            // MIE LAINNYA
+            { id: 7, name: "Mie Nyemek", price: 13000, cat: "Mie" },
+            { id: 21, name: "Indomie Kuah/Goreng", price: 8000, cat: "Mie" },
+            // NASI
+            { id: 9, name: "Nasi Goreng Kampung", price: 13000, cat: "Nasi" },
+            { id: 12, name: "Kwetiau Goreng", price: 13000, cat: "Nasi" },
+            { id: 8, name: "Nasi Putih", price: 4000, cat: "Nasi" },
+            // LUMPIA
+            { id: 10, name: "Lumpia Basah", price: 20000, cat: "Lumpia" },
+            { id: 11, name: "Lumpia Kwetiau", price: 15000, cat: "Lumpia" },
+            // SEBLAK
+            { id: 13, name: "Seblak Biasa", price: 10000, cat: "Seblak" },
+            { id: 14, name: "Seblak Ceker", price: 15000, cat: "Seblak" },
+            { id: 15, name: "Seblak Tulang", price: 15000, cat: "Seblak" },
+            { id: 16, name: "Seblak Telor", price: 13000, cat: "Seblak" },
+            { id: 17, name: "Seblak Seafood", price: 10000, cat: "Seblak" },
+            { id: 18, name: "Seblak Komplit", price: 17000, cat: "Seblak" },
+            { id: 19, name: "Seblak Indomie", price: 10000, cat: "Seblak" },
+            { id: 20, name: "Seblak Bakso Aci", price: 15000, cat: "Seblak" },
+            // BAKSO & CUANGKI
+            { id: 22, name: "Bakso Aci", price: 15000, cat: "Bakso" },
+            { id: 23, name: "Bakso Cuangki", price: 15000, cat: "Bakso" },
+            // MINUMAN
+            { id: 24, name: "Es Teh Manis", price: 4000, cat: "Minuman" },
+            { id: 25, name: "Teh Tarik", price: 6000, cat: "Minuman" },
+            { id: 26, name: "Teh Jus", price: 3000, cat: "Minuman" },
+            { id: 27, name: "Es Cappucino", price: 5000, cat: "Minuman" },
+            { id: 28, name: "Nutrisari", price: 4000, cat: "Minuman" },
+            { id: 29, name: "Pop Ice", price: 4000, cat: "Minuman" },
+            { id: 30, name: "Teh Tawar", price: 0, cat: "Minuman" },
+        ];
+
+        const toppings = [
+            { id: 1, name: "Aneka Seafood", price: 1500 },
+            { id: 2, name: "Aneka Kriuk", price: 5000 },
+            { id: 3, name: "Dumpling Ayam/Keju", price: 2000 },
+            { id: 4, name: "Tulang", price: 5000 },
+            { id: 5, name: "Telor", price: 3000 },
+            { id: 6, name: "Kikil", price: 15000 },
+            { id: 7, name: "Ceker (2 pcs)", price: 5000 },
+        ];
+
+        let promoData = [
+            { code: "HEMAT10", disc: 0.1 },
+            { code: "DAPURSAYA", disc: 0.2 }
+        ];
+
+        // --- STATE ---
+        let state = {
+            isAdmin: false,
+            currentTab: 'menu',
+            currentAdminTab: 'report',
+            cart: [],
+            appliedPromo: null,
+            orders: [],
+            activeOrder: null,
+            // Temp for selection
+            tempItem: null,
+            tempLevel: 0,
+            tempToppings: []
+        };
+
+        // --- CORE FUNCTIONS ---
+        function updateUI() {
+            const content = document.getElementById('content');
+            const navCust = document.getElementById('nav-customer');
+            const navAdmin = document.getElementById('nav-admin');
+            const modeText = document.getElementById('mode-text');
+
+            if (state.isAdmin) {
+                navCust.classList.add('hidden');
+                navAdmin.classList.remove('hidden');
+                navAdmin.classList.add('flex');
+                modeText.innerText = "Mode Admin/Kasir";
+                modeText.className = "text-[9px] font-bold text-purple-600 uppercase tracking-widest";
+                
+                if (state.currentAdminTab === 'report') renderReport();
+                else if (state.currentAdminTab === 'orders') renderAdminOrders();
+                else renderManage();
+            } else {
+                navCust.classList.remove('hidden');
+                navAdmin.classList.add('hidden');
+                modeText.innerText = "Mode Pelanggan";
+                modeText.className = "text-[9px] font-bold text-slate-400 uppercase tracking-widest";
+                
+                if (state.currentTab === 'menu') renderMenu();
+                else if (state.currentTab === 'cart') renderCart();
+                else renderStatus();
+            }
+            updateNavStyles();
+            lucide.createIcons();
+        }
+
+        // --- RENDERERS (CUSTOMER) ---
+        function renderMenu() {
+            const categories = [...new Set(menuData.map(m => m.cat))];
+            let html = `
+                <div class="mb-4 bg-purple-50 p-4 rounded-2xl border border-purple-100">
+                    <h2 class="text-xs font-black text-purple-700 uppercase tracking-tighter">Promo Hari Ini</h2>
+                    <p class="text-[10px] text-purple-500 font-bold">Gunakan kode <span class="bg-white px-1 rounded">DAPURSAYA</span> Diskon 20%</p>
+                </div>
+            `;
+
+            categories.forEach(cat => {
+                html += `
+                    <div class="mb-6">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1">${cat}</h3>
+                        <div class="space-y-2">
+                            ${menuData.filter(m => m.cat === cat).map(m => `
+                                <div onclick="openCustomizer(${m.id})" class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-2xl shadow-sm active:scale-95 transition-all cursor-pointer">
+                                    <div class="flex-1">
+                                        <h4 class="text-xs font-bold text-slate-800">${m.name}</h4>
+                                        <p class="text-[10px] font-black text-purple-600">${m.price === 0 ? 'GRATIS' : 'Rp'+m.price.toLocaleString()}</p>
+                                    </div>
+                                    <div class="bg-purple-600 text-white p-1.5 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function renderCart() {
+            const container = document.getElementById('content');
+            if (state.cart.length === 0) {
+                container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-slate-300"><i data-lucide="shopping-cart" class="w-16 h-16 mb-4"></i><p class="text-xs font-bold uppercase tracking-widest">Keranjang Kosong</p></div>`;
+                return;
+            }
+
+            let subtotal = state.cart.reduce((a, b) => a + b.total, 0);
+            let discount = state.appliedPromo ? subtotal * state.appliedPromo.disc : 0;
+            let total = subtotal - discount;
+
+            container.innerHTML = `
+                <h2 class="text-xl font-black mb-6">Keranjang Anda</h2>
+                <div class="space-y-3 mb-8">
+                    ${state.cart.map((item, idx) => `
+                        <div class="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-between items-center">
+                            <div>
+                                <h4 class="text-xs font-bold">${item.name}</h4>
+                                <p class="text-[9px] text-slate-400 font-bold">Lvl ${item.level} • ${item.toppings.length} Topping</p>
+                                <p class="text-xs font-black text-purple-600 mt-1">Rp${item.total.toLocaleString()}</p>
+                            </div>
+                            <button onclick="removeFromCart(${idx})" class="p-2 text-red-500 bg-red-50 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="bg-slate-50 p-6 rounded-3xl space-y-4 border border-slate-100">
+                    <div class="flex gap-2">
+                        <input id="promo-input" type="text" placeholder="KODE PROMO" class="flex-1 px-4 py-2 bg-white rounded-xl text-xs font-bold border border-slate-200 uppercase" value="${state.appliedPromo ? state.appliedPromo.code : ''}">
+                        <button onclick="applyPromo()" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black">CEK</button>
+                    </div>
+                    <div class="space-y-1 pt-2 border-t border-slate-200">
+                        <div class="flex justify-between text-xs font-bold text-slate-400"><span class="uppercase">Subtotal</span><span>Rp${subtotal.toLocaleString()}</span></div>
+                        ${discount > 0 ? `<div class="flex justify-between text-xs font-bold text-green-600"><span class="uppercase">Diskon</span><span>-Rp${discount.toLocaleString()}</span></div>` : ''}
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-sm font-black uppercase">Total</span>
+                            <span class="text-xl font-black text-purple-600">Rp${total.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <button onclick="checkout()" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-black shadow-lg">PESAN SEKARANG</button>
+                </div>
+            `;
+        }
+
+        function renderStatus() {
+            const container = document.getElementById('content');
+            if (!state.activeOrder) {
+                container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-slate-300"><i data-lucide="receipt" class="w-16 h-16 mb-4"></i><p class="text-xs font-bold uppercase tracking-widest">Belum ada pesanan</p></div>`;
+                return;
+            }
+
+            const o = state.activeOrder;
+            container.innerHTML = `
+                <div class="text-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nomor Antrean</p>
+                        <h2 class="text-5xl font-black text-purple-600 mt-2">#${o.id.split('-')[1]}</h2>
+                    </div>
+                    
+                    ${o.status === 'UNPAID' ? `
+                        <div class="bg-slate-50 p-6 rounded-3xl inline-block border-2 border-dashed border-slate-200">
+                            <i data-lucide="qr-code" class="w-40 h-40 text-slate-900"></i>
+                        </div>
+                        <p class="text-[10px] font-bold text-slate-400 px-6 italic">Silakan tunjukkan QR ini ke kasir untuk proses pembayaran dan memulai masak.</p>
+                        <button onclick="confirmPaymentSim()" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-black shadow-lg">SUDAH BAYAR</button>
+                    ` : `
+                        <div class="py-10">
+                            <div class="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i data-lucide="${o.status === 'DONE' ? 'check-circle' : 'chef-hat'}" class="w-10 h-10 ${o.status === 'PROCESS' ? 'animate-pulse' : ''}"></i>
+                            </div>
+                            <h3 class="font-black text-lg uppercase tracking-tight">${o.status === 'DONE' ? 'PESANAN SIAP!' : 'DIPROSES DAPUR'}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 mt-2 px-10">Mohon menunggu petugas memanggil nomor antrean Anda.</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // --- RENDERERS (ADMIN) ---
+        function renderReport() {
+            const container = document.getElementById('content');
+            const totalRevenue = state.orders.reduce((a, b) => a + b.total, 0);
+            const totalItems = state.orders.length;
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Total Omzet</p>
+                            <h4 class="text-lg font-black text-purple-600">Rp${totalRevenue.toLocaleString()}</h4>
+                        </div>
+                        <div class="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Jml Pesanan</p>
+                            <h4 class="text-lg font-black text-slate-900">${totalItems}</h4>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white border border-slate-100 rounded-[32px] shadow-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Tren Penjualan</h3>
+                            <select class="text-[10px] font-bold bg-slate-50 border-none rounded-lg p-1">
+                                <option>Harian</option>
+                                <option>Mingguan</option>
+                            </select>
+                        </div>
+                        <canvas id="salesChart" height="200"></canvas>
+                    </div>
+
+                    <div class="bg-slate-900 text-white p-6 rounded-[32px] shadow-xl">
+                        <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Laporan Ringkasan</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                                <span class="text-[11px] font-bold opacity-60">Penjualan Harian</span>
+                                <span class="text-sm font-black">Rp${(totalRevenue * 0.2).toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                                <span class="text-[11px] font-bold opacity-60">Penjualan Mingguan</span>
+                                <span class="text-sm font-black">Rp${(totalRevenue * 0.8).toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-bold opacity-60">Penjualan Bulanan</span>
+                                <span class="text-sm font-black text-purple-400">Rp${totalRevenue.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            setTimeout(initChart, 100);
+        }
+
+        function renderAdminOrders() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-black">Antrean Pesanan</h2>
+                    <div class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-[10px] font-black">${state.orders.filter(o => o.status !== 'DONE').length} AKTIF</div>
+                </div>
+                <div class="space-y-3">
+                    ${state.orders.length === 0 ? '<p class="text-center py-20 text-slate-300 text-xs italic">Belum ada pesanan masuk</p>' : ''}
+                    ${state.orders.map(o => `
+                        <div class="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-black text-sm">#${o.id.split('-')[1]}</h4>
+                                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${o.status}</p>
+                                </div>
+                                <span class="text-xs font-black text-purple-600">Rp${o.total.toLocaleString()}</span>
+                            </div>
+                            <div class="text-[10px] font-bold text-slate-500 bg-slate-50 p-2 rounded-xl">
+                                ${o.items.map(i => `${i.name} (Lvl ${i.level})`).join(', ')}
+                            </div>
+                            <div class="flex gap-2">
+                                ${o.status === 'UNPAID' ? `<button onclick="updateStatus('${o.id}', 'PROCESS')" class="flex-1 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase">Konfirmasi Bayar</button>` : ''}
+                                ${o.status === 'PROCESS' ? `<button onclick="updateStatus('${o.id}', 'DONE')" class="flex-1 py-2 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase">Selesaikan</button>` : ''}
+                                ${o.status === 'DONE' ? `<button class="flex-1 py-2 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase" disabled>Selesai</button>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderManage() {
+            const container = document.getElementById('content');
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-black text-slate-900">Data Menu</h2>
+                        <button onclick="openMenuEditor()" class="p-2 bg-purple-600 text-white rounded-xl shadow-lg"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="space-y-2">
+                        ${menuData.map(m => `
+                            <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                <div>
+                                    <h4 class="text-xs font-bold">${m.name}</h4>
+                                    <p class="text-[10px] font-black text-purple-600">Rp${m.price.toLocaleString()}</p>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button onclick="openMenuEditor(${m.id})" class="p-2 text-blue-500"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                    <button onclick="deleteMenu(${m.id})" class="p-2 text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-100">
+                        <h3 class="text-sm font-black mb-4 uppercase tracking-widest text-slate-400">Kode Promo</h3>
+                        <div class="space-y-2">
+                            ${promoData.map(p => `
+                                <div class="p-4 bg-slate-900 text-white rounded-2xl flex justify-between items-center">
+                                    <span class="text-xs font-black tracking-widest">${p.code}</span>
+                                    <span class="text-[10px] font-bold text-purple-400">DISKON ${p.disc * 100}%</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- CHART UTILS ---
+        function initChart() {
+            const ctx = document.getElementById('salesChart');
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                    datasets: [{
+                        label: 'Omzet',
+                        data: [120000, 190000, 300000, 150000, 450000, 800000, 950000],
+                        backgroundColor: '#7c3aed',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { display: false },
+                        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+
+        // --- ACTION HANDLERS ---
+        function openCustomizer(id) {
+            const item = menuData.find(m => m.id === id);
+            state.tempItem = item;
+            state.tempLevel = 0;
+            state.tempToppings = [];
+
+            const modal = document.getElementById('modal-content');
+            modal.innerHTML = `
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-xl font-black">${item.name}</h3>
+                        <p class="text-xs font-black text-purple-600">Rp${item.price.toLocaleString()}</p>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-300"><i data-lucide="x"></i></button>
+                </div>
+
+                <div class="space-y-6">
+                    ${item.cat !== 'Minuman' && item.name !== 'Nasi Putih' ? `
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Pilih Level Pedas</p>
+                            <div class="grid grid-cols-6 gap-2">
+                                ${[0, 1, 2, 3, 4, 5].map(l => `
+                                    <button onclick="setLevel(${l})" id="lvl-${l}" class="lvl-btn aspect-square rounded-xl border-2 border-slate-50 bg-slate-50 text-xs font-black text-slate-400 transition-all ${l === 0 ? 'border-purple-600 bg-purple-600 text-white' : ''}">${l}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${['Seblak', 'Mie', 'Bakso'].includes(item.cat) ? `
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Tambah Topping</p>
+                            <div class="space-y-2">
+                                ${toppings.map(t => `
+                                    <div onclick="toggleTopping(${t.id})" id="top-${t.id}" class="top-row p-4 bg-slate-50 rounded-2xl border-2 border-transparent flex justify-between items-center cursor-pointer">
+                                        <div class="flex items-center gap-3">
+                                            <div id="check-${t.id}" class="w-5 h-5 rounded-lg bg-white flex items-center justify-center text-transparent"><i data-lucide="check" class="w-3 h-3"></i></div>
+                                            <span class="text-xs font-bold">${t.name}</span>
+                                        </div>
+                                        <span class="text-[10px] font-black text-purple-600">+Rp${t.price.toLocaleString()}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-slate-100 sticky bottom-0 bg-white">
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase">Subtotal Item</span>
+                        <span id="temp-total" class="text-xl font-black text-purple-600">Rp${item.price.toLocaleString()}</span>
+                    </div>
+                    <button onclick="addToCart()" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-black shadow-lg">TAMBAHKAN PESANAN</button>
+                </div>
+            `;
+            document.getElementById('modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function setLevel(l) {
+            state.tempLevel = l;
+            document.querySelectorAll('.lvl-btn').forEach(b => b.className = "lvl-btn aspect-square rounded-xl border-2 border-slate-50 bg-slate-50 text-xs font-black text-slate-400 transition-all");
+            document.getElementById(`lvl-${l}`).className = "lvl-btn aspect-square rounded-xl border-2 border-purple-600 bg-purple-600 text-white text-xs font-black transition-all";
+        }
+
+        function toggleTopping(id) {
+            const idx = state.tempToppings.indexOf(id);
+            if (idx > -1) state.tempToppings.splice(idx, 1);
+            else state.tempToppings.push(id);
+
+            const row = document.getElementById(`top-${id}`);
+            const check = document.getElementById(`check-${id}`);
+            
+            if (state.tempToppings.includes(id)) {
+                row.className = "top-row p-4 bg-purple-50 rounded-2xl border-2 border-purple-200 flex justify-between items-center cursor-pointer";
+                check.className = "w-5 h-5 rounded-lg bg-purple-600 flex items-center justify-center text-white";
+            } else {
+                row.className = "top-row p-4 bg-slate-50 rounded-2xl border-2 border-transparent flex justify-between items-center cursor-pointer";
+                check.className = "w-5 h-5 rounded-lg bg-white flex items-center justify-center text-transparent";
+            }
+            
+            // Calculate temp total
+            let total = state.tempItem.price;
+            state.tempToppings.forEach(tid => total += toppings.find(t => t.id === tid).price);
+            document.getElementById('temp-total').innerText = 'Rp' + total.toLocaleString();
+        }
+
+        function addToCart() {
+            let total = state.tempItem.price;
+            state.tempToppings.forEach(tid => total += toppings.find(t => t.id === tid).price);
+            
+            state.cart.push({
+                ...state.tempItem,
+                level: state.tempLevel,
+                toppings: state.tempToppings.map(tid => toppings.find(t => t.id === tid)),
+                total: total
+            });
+            
+            updateCartBadge();
+            closeModal();
+            setTab('cart');
+        }
+
+        function updateCartBadge() {
+            const b = document.getElementById('cart-badge');
+            b.innerText = state.cart.length;
+            b.style.display = state.cart.length > 0 ? 'flex' : 'none';
+        }
+
+        function applyPromo() {
+            const code = document.getElementById('promo-input').value.toUpperCase();
+            const promo = promoData.find(p => p.code === code);
+            if (promo) {
+                state.appliedPromo = promo;
+                renderCart();
+            } else {
+                alert("Kode promo tidak ditemukan");
+            }
+        }
+
+        function checkout() {
+            let subtotal = state.cart.reduce((a, b) => a + b.total, 0);
+            let discount = state.appliedPromo ? subtotal * state.appliedPromo.disc : 0;
+            
+            const newOrder = {
+                id: 'KDS-' + Math.floor(1000 + Math.random() * 9000),
+                items: [...state.cart],
+                total: subtotal - discount,
+                status: 'UNPAID',
+                date: new Date()
+            };
+            
+            state.activeOrder = newOrder;
+            state.orders.unshift(newOrder);
+            state.cart = [];
+            state.appliedPromo = null;
+            updateCartBadge();
+            setTab('status');
+        }
+
+        function confirmPaymentSim() {
+            updateStatus(state.activeOrder.id, 'PROCESS');
+        }
+
+        function updateStatus(id, newStatus) {
+            state.orders = state.orders.map(o => o.id === id ? {...o, status: newStatus} : o);
+            if (state.activeOrder && state.activeOrder.id === id) {
+                state.activeOrder.status = newStatus;
+            }
+            updateUI();
+        }
+
+        function deleteMenu(id) {
+            if (confirm("Hapus menu ini?")) {
+                menuData = menuData.filter(m => m.id !== id);
+                renderManage();
+            }
+        }
+
+        function openMenuEditor(id = null) {
+            const m = id ? menuData.find(i => i.id === id) : { name: '', price: 0, cat: 'Sop' };
+            const modal = document.getElementById('modal-content');
+            modal.innerHTML = `
+                <h3 class="text-xl font-black mb-6">${id ? 'Edit Menu' : 'Tambah Menu'}</h3>
+                <div class="space-y-4">
+                    <input id="m-name" type="text" value="${m.name}" placeholder="Nama Menu" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-xs font-bold">
+                    <input id="m-price" type="number" value="${m.price}" placeholder="Harga" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-xs font-bold">
+                    <select id="m-cat" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-xs font-bold">
+                        <option ${m.cat === 'Sop' ? 'selected' : ''}>Sop</option>
+                        <option ${m.cat === 'Mie' ? 'selected' : ''}>Mie</option>
+                        <option ${m.cat === 'Seblak' ? 'selected' : ''}>Seblak</option>
+                        <option ${m.cat === 'Nasi' ? 'selected' : ''}>Nasi</option>
+                        <option ${m.cat === 'Lumpia' ? 'selected' : ''}>Lumpia</option>
+                        <option ${m.cat === 'Bakso' ? 'selected' : ''}>Bakso</option>
+                        <option ${m.cat === 'Minuman' ? 'selected' : ''}>Minuman</option>
+                    </select>
+                    <button onclick="saveMenu(${id})" class="w-full py-4 bg-purple-600 text-white rounded-2xl font-black">SIMPAN</button>
+                    <button onclick="closeModal()" class="w-full py-2 text-slate-400 font-black text-[10px] uppercase">Batal</button>
+                </div>
+            `;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function saveMenu(id) {
+            const name = document.getElementById('m-name').value;
+            const price = parseInt(document.getElementById('m-price').value);
+            const cat = document.getElementById('m-cat').value;
+            
+            if (id) {
+                menuData = menuData.map(m => m.id === id ? {...m, name, price, cat} : m);
+            } else {
+                menuData.push({ id: Date.now(), name, price, cat });
+            }
+            closeModal();
+            renderManage();
+        }
+
+        // --- NAVIGATION ---
+        function toggleView() {
+            state.isAdmin = !state.isAdmin;
+            updateUI();
+        }
+        function setTab(t) {
+            state.currentTab = t;
+            updateUI();
+        }
+        function setAdminTab(t) {
+            state.currentAdminTab = t;
+            updateUI();
+        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        function removeFromCart(idx) { state.cart.splice(idx, 1); updateCartBadge(); renderCart(); }
+
+        function updateNavStyles() {
+            // Customer
+            document.querySelectorAll('#nav-customer button').forEach(b => b.classList.remove('active-tab'));
+            const activeC = document.getElementById('btn-' + state.currentTab);
+            if (activeC) activeC.classList.add('active-tab');
+
+            // Admin
+            document.querySelectorAll('#nav-admin button').forEach(b => b.classList.remove('active-tab-admin'));
+            const activeA = document.getElementById('admin-' + state.currentAdminTab);
+            if (activeA) activeA.classList.add('active-tab-admin');
+        }
+
+        // --- INIT ---
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
